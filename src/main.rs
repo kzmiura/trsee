@@ -42,23 +42,26 @@ fn main() -> std::io::Result<()> {
                     let raw_file_name = entry.file_name();
                     let file_name = raw_file_name.to_string_lossy();
 
+                    // Pre-printing processing
                     if !cli.show_hidden && file_name.starts_with('.') {
                         continue;
                     }
 
+                    // Printing
                     let (arm, padding) = if entries.peek().is_some() {
                         ("+-- ", "|   ")
                     } else {
                         ("`-- ", "    ")
                     };
-
                     let prefix = prefix.as_ref();
                     println!("{}{}{}", prefix, arm, file_name);
 
+                    // Post-printing processing
                     if !cli.follow_symlinks && entry.file_type()?.is_symlink() {
                         continue;
                     }
 
+                    // Recursion
                     let Summary {
                         dir_count,
                         file_count,
@@ -69,6 +72,7 @@ fn main() -> std::io::Result<()> {
                         cli,
                     )?;
 
+                    // Total
                     if path.is_dir() {
                         summary.dir_count += dir_count + 1;
                     } else {
