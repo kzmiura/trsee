@@ -36,10 +36,12 @@ fn main() -> std::io::Result<()> {
             let mut summary = Summary::default();
             let mut entries = fs::read_dir(dir)?
                 .filter_map(|e| e.inspect_err(|e| eprintln!("{}", e)).ok())
+                // Hidden files
                 .filter(|e| cli.show_hidden || !e.file_name().as_encoded_bytes().starts_with(b"."))
                 .peekable();
             while let Some(entry) = entries.next() {
                 let path = entry.path();
+                let file_type = entry.file_type()?;
                 let raw_file_name = entry.file_name();
                 let file_name = raw_file_name.to_string_lossy();
 
@@ -53,7 +55,7 @@ fn main() -> std::io::Result<()> {
                 println!("{}{}{}", prefix, arm, file_name);
 
                 // Post-printing processing
-                if !cli.follow_symlinks && entry.file_type()?.is_symlink() {
+                if !cli.follow_symlinks && file_type.is_symlink() {
                     continue;
                 }
 
@@ -71,7 +73,6 @@ fn main() -> std::io::Result<()> {
                 // Summary
                 summary.dir_count += dir_count;
                 summary.file_count += file_count;
-                let file_type = entry.file_type()?;
                 if file_type.is_dir() {
                     summary.dir_count += 1;
                 } else if file_type.is_file() {
