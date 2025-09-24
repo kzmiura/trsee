@@ -32,67 +32,67 @@ fn main() -> std::io::Result<()> {
         depth: Option<u32>,
         cli: &Cli,
     ) -> std::io::Result<Summary> {
-        let mut summary = Summary::default();
-        if depth.is_none_or(|d| d > 0) {
-            if dir.is_dir() {
-                let mut entries = fs::read_dir(dir)?.into_iter().peekable();
-                while let Some(entry) = entries.next() {
-                    let entry = entry?;
-                    let path = entry.path();
-                    let raw_file_name = entry.file_name();
-                    let file_name = raw_file_name.to_string_lossy();
+        if dir.is_dir() && depth.is_none_or(|d| d > 0) {
+            let mut summary = Summary::default();
+            let mut entries = fs::read_dir(dir)?
+                .filter_map(|e| e.inspect_err(|e| eprintln!("{}", e)).ok())
+                .filter(|e| cli.show_hidden || !e.file_name().as_encoded_bytes().starts_with(b"."))
+                .peekable();
+            while let Some(entry) = entries.next() {
+                let path = entry.path();
+                let raw_file_name = entry.file_name();
+                let file_name = raw_file_name.to_string_lossy();
 
-                    // Pre-printing processing
-                    if !cli.show_hidden && file_name.starts_with('.') {
-                        continue;
-                    }
+                // Printing
+                let (arm, padding) = if entries.peek().is_some() {
+                    ("+-- ", "|   ")
+                } else {
+                    ("`-- ", "    ")
+                };
+                let prefix = prefix.as_ref();
+                println!("{}{}{}", prefix, arm, file_name);
 
-                    // Printing
-                    let (arm, padding) = if entries.peek().is_some() {
-                        ("+-- ", "|   ")
-                    } else {
-                        ("`-- ", "    ")
-                    };
-                    let prefix = prefix.as_ref();
-                    println!("{}{}{}", prefix, arm, file_name);
-
-                    // Post-printing processing
-                    if !cli.follow_symlinks && entry.file_type()?.is_symlink() {
-                        continue;
-                    }
-
-                    // Recursion
-                    let Summary {
-                        dir_count: child_dir_count,
-                        file_count: child_file_count,
-                    } = visit_dirs(
-                        &path,
-                        prefix.to_owned() + padding,
-                        depth.map(|d| d - 1),
-                        cli,
-                    )?;
-
-                    // Total
-                    if path.is_dir() {
-                        summary.dir_count += child_dir_count + 1;
-                    } else {
-                        summary.file_count += child_file_count + 1;
-                    }
+                // Post-printing processing
+                if !cli.follow_symlinks && entry.file_type()?.is_symlink() {
+                    continue;
                 }
-            // Visited path is a file
-            } else {
-                summary.file_count += 1;
-            }
-        }
 
-        Ok(summary)
+                // Recursion
+                let Summary {
+                    dir_count,
+                    file_count,
+                } = visit_dirs(
+                    &path,
+                    prefix.to_owned() + padding,
+                    depth.map(|d| d - 1),
+                    cli,
+                )?;
+
+                // Summary
+                summary.dir_count += dir_count;
+                summary.file_count += file_count;
+                let file_type = entry.file_type()?;
+                if file_type.is_dir() {
+                    summary.dir_count += 1;
+                } else if file_type.is_file() {
+                    summary.file_count += 1;
+                }
+            }
+            Ok(summary)
+        } else {
+            Ok(Summary::default())
+        }
     }
 
+    // Print the root
     println!("{}", cli.dir.display());
     let Summary {
         dir_count,
         file_count,
     } = visit_dirs(&cli.dir, "", cli.depth, &cli)?;
+
+    // Print summary
+
     if cli.show_summary {
         println!(
             "\n{} {}, {} {}",
