@@ -63,8 +63,8 @@ fn main() -> std::io::Result<()> {
 
                     // Recursion
                     let Summary {
-                        dir_count,
-                        file_count,
+                        dir_count: child_dir_count,
+                        file_count: child_file_count,
                     } = visit_dirs(
                         &path,
                         prefix.to_owned() + padding,
@@ -74,11 +74,12 @@ fn main() -> std::io::Result<()> {
 
                     // Total
                     if path.is_dir() {
-                        summary.dir_count += dir_count + 1;
+                        summary.dir_count += child_dir_count + 1;
                     } else {
-                        summary.file_count += file_count + 1;
+                        summary.file_count += child_file_count + 1;
                     }
                 }
+            // Visited path is a file
             } else {
                 summary.file_count += 1;
             }
