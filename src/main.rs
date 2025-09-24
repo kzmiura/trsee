@@ -32,7 +32,9 @@ fn main() -> std::io::Result<()> {
         depth: Option<u32>,
         cli: &Cli,
     ) -> std::io::Result<Summary> {
-        if dir.is_dir() && depth.is_none_or(|d| d > 0) {
+        if depth.is_some_and(|d| d == 0) || !dir.is_dir() {
+            Ok(Summary::default())
+        } else {
             let mut summary = Summary::default();
             let mut entries = fs::read_dir(dir)?
                 .filter_map(|e| e.inspect_err(|e| eprintln!("{}", e)).ok())
@@ -80,8 +82,6 @@ fn main() -> std::io::Result<()> {
                 }
             }
             Ok(summary)
-        } else {
-            Ok(Summary::default())
         }
     }
 
