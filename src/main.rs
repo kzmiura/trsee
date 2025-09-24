@@ -98,13 +98,13 @@ fn main() -> std::io::Result<()> {
         println!(
             "\n{} {}, {} {}",
             dir_count,
-            if dir_count > 1 {
-                "directories"
-            } else {
+            if dir_count == 1 {
                 "directory"
+            } else {
+                "directories"
             },
             file_count,
-            if file_count > 1 { "files" } else { "file" }
+            if file_count == 1 { "file" } else { "files" }
         );
     }
 
